@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 var mapURL = make(map[string]string)
@@ -42,11 +43,12 @@ func handlerShot(w http.ResponseWriter, r *http.Request) {
 
 func handlerIndex(w http.ResponseWriter, r *http.Request) {
 
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		http.Error(w, "The id parameter is missing", http.StatusBadRequest)
+	idPath := r.URL.Path
+	if idPath == "" {
+		http.Error(w, "The parameter is missing", http.StatusBadRequest)
 		return
 	}
+	id := strings.TrimPrefix(idPath, "/")
 	url, exp := mapID[id]
 
 	if !exp {
