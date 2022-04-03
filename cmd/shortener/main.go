@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/SavchenkoOleg/shot.git/handlers"
+	"github.com/SavchenkoOleg/shot.git/internal/handlers"
 )
 
 func firstResort(w http.ResponseWriter, r *http.Request) {
