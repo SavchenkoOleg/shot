@@ -1,3 +1,3 @@
-module github.com/SavchenkoOleg/shortener.git
+module github.com/SavchenkoOleg/shot.git
 
 go 1.18

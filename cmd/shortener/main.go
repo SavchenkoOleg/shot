@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
-	"internal/handlers"
-	
+
+	"github.com/SavchenkoOleg/shot.git/handlers"
 )
 
 func firstResort(w http.ResponseWriter, r *http.Request) {
