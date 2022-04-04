@@ -5,27 +5,22 @@ import (
 	"net/http"
 
 	"github.com/SavchenkoOleg/shot.git/internal/handlers"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-func firstResort(w http.ResponseWriter, r *http.Request) {
-
-	switch r.Method {
-
-	case http.MethodPost:
-		handlers.HandlerShot(w, r)
-	case http.MethodGet:
-		handlers.HandlerIndex(w, r)
-	default:
-		http.Error(w, "Only POST or GET requests are allowed!", http.StatusMethodNotAllowed)
-	}
-
-}
 func main() {
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", firstResort)
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
-	err := http.ListenAndServe(":8080", mux)
+	r.Get("/{id}", handlers.HandlerIndex)
+	r.Post("/", handlers.HandlerShot)
+
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatal(err)
 	}
