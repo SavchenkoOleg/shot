@@ -136,4 +136,5 @@ func TestHandlerShot(t *testing.T) {
 	testingPostHandler(t)
 
 	testingGetHandler(t)
+
 }
