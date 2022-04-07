@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SavchenkoOleg/shot.git/internal/handlers"
+	"github.com/SavchenkoOleg/shot/internal/handlers"
 )
 
 func testingPostHandler(t *testing.T) {

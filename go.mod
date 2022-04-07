@@ -1,4 +1,4 @@
-module github.com/SavchenkoOleg/shot.git
+module github.com/SavchenkoOleg/shot
 
 go 1.18
 
