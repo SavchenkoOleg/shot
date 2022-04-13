@@ -199,7 +199,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			}
 
 			txSt := outSt{}
-			err = json.Unmarshal(resBody, &txSt)
+			json.Unmarshal(resBody, &txSt)
 
 			if txSt != tt.want.response {
 				t.Errorf("Expected body %s, got %s", tt.want.response.Result, txSt.Result)
