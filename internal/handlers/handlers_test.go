@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,7 +23,7 @@ func testingPostHandler(t *testing.T) {
 		want want
 	}{
 		{
-			name: "positive test #1",
+			name: "positive test Post #1",
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
@@ -30,7 +31,7 @@ func testingPostHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "positive test #2",
+			name: "positive test Post #2",
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
@@ -38,7 +39,7 @@ func testingPostHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "negative test #1 (empty body quest)",
+			name: "negative test Post #1 (empty body quest)",
 			body: "",
 			want: want{
 				code:     400,
@@ -87,7 +88,7 @@ func testingGetHandler(t *testing.T) {
 		want   want
 	}{
 		{
-			name:   "negative test #2 (empty target)",
+			name:   "negative GET test #2 (empty target)",
 			target: "http://localhost:8080",
 			want: want{
 				code:     400,
@@ -95,7 +96,7 @@ func testingGetHandler(t *testing.T) {
 			},
 		},
 		{
-			name:   "negative test #3 (bed target)",
+			name:   "negative GET test #3 (bed target)",
 			target: "http://localhost:8080/newURL3",
 			want: want{
 				code:     400,
@@ -131,10 +132,89 @@ func testingGetHandler(t *testing.T) {
 	}
 }
 
+func testingPostHandlerJSON(t *testing.T) {
+
+	type inSt struct {
+		URL string `json:"url"`
+	}
+	type outSt struct {
+		Result string `json:"result"`
+	}
+
+	type want struct {
+		code     int
+		response outSt
+	}
+
+	tests := []struct {
+		name string
+		body inSt
+		want want
+	}{
+		{
+			name: "positive JSON test #1",
+			body: inSt{URL: "https://golang-blog.blogspot.com"},
+			want: want{
+				code:     201,
+				response: outSt{Result: "http://localhost:8080/newURL3"},
+			},
+		},
+		{
+			name: "positive JSON test #2",
+			body: inSt{URL: "https://jsoneditoronline.org"},
+			want: want{
+				code:     201,
+				response: outSt{Result: "http://localhost:8080/newURL4"},
+			},
+		},
+		{
+			name: "negative JSON test #1 (empty body quest)",
+			body: inSt{},
+			want: want{
+				code:     400,
+				response: outSt{},
+			},
+		},
+	}
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			tx, _ := json.Marshal(tt.body)
+			bodyReader := strings.NewReader(string(tx))
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bodyReader)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(handlers.HandlerShotJSON)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			if res.StatusCode != tt.want.code {
+				t.Errorf("Expected status code %d, got %d", tt.want.code, w.Code)
+			}
+
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			txSt := outSt{}
+			err = json.Unmarshal(resBody, &txSt)
+
+			if txSt != tt.want.response {
+				t.Errorf("Expected body %s, got %s", tt.want.response.Result, txSt.Result)
+			}
+
+		})
+	}
+}
+
 func TestHandlerShot(t *testing.T) {
 
 	testingPostHandler(t)
 
 	testingGetHandler(t)
+
+	testingPostHandlerJSON(t)
 
 }
