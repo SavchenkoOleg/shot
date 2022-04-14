@@ -24,7 +24,7 @@ func HendlerSetting() (outConf ServConfig) {
 	var exp bool
 
 	outConf.NewURLPref = "newURL"
-	outConf.ServerAdress = ":8080"
+	outConf.ServerAdress = "http://localhost:8080"
 
 	newURLPref, exp = os.LookupEnv("BASE_URL")
 	if exp {
@@ -49,9 +49,8 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var NewID string
-	var config ServConfig
 
-	config = HendlerSetting()
+	config := HendlerSetting()
 
 	bodyIn := inSt{}
 	bodyOut := outSt{}
@@ -81,7 +80,7 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 		mapID[NewID] = bodyURL
 	}
 
-	bodyOut.Result = "http://localhost" + config.ServerAdress + NewID
+	bodyOut.Result = config.ServerAdress + NewID
 
 	tx, err := json.Marshal(bodyOut)
 
@@ -99,9 +98,8 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
 	var NewID string
-	var config ServConfig
 
-	config = HendlerSetting()
+	config := HendlerSetting()
 
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
@@ -122,7 +120,7 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 		mapURL[bodyURL] = NewID
 		mapID[NewID] = bodyURL
 	}
-	NewURL := "http://localhost" + config.ServerAdress + NewID
+	NewURL := config.ServerAdress + NewID
 	w.WriteHeader(201)
 	w.Write([]byte(NewURL))
 }
