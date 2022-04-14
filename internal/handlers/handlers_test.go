@@ -17,6 +17,9 @@ func testingPostHandler(t *testing.T) {
 		response string
 	}
 
+	var HendlerSetting handlers.ServConfig
+	HendlerSetting = handlers.HendlerSetting()
+
 	tests := []struct {
 		name string
 		body string
@@ -27,7 +30,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
-				response: "http://localhost:8080/newURL1",
+				response: "http://localhost" + HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "1",
 			},
 		},
 		{
@@ -35,7 +38,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
-				response: "http://localhost:8080/newURL2",
+				response: "http://localhost" + HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "2",
 			},
 		},
 		{
@@ -82,6 +85,9 @@ func testingGetHandler(t *testing.T) {
 		response string
 	}
 
+	var HendlerSetting handlers.ServConfig
+	HendlerSetting = handlers.HendlerSetting()
+
 	tests := []struct {
 		name   string
 		target string
@@ -89,7 +95,7 @@ func testingGetHandler(t *testing.T) {
 	}{
 		{
 			name:   "negative GET test #2 (empty target)",
-			target: "http://localhost:8080",
+			target: "http://localhost" + HendlerSetting.ServerAdress,
 			want: want{
 				code:     400,
 				response: "The parameter is missing\n",
@@ -97,7 +103,7 @@ func testingGetHandler(t *testing.T) {
 		},
 		{
 			name:   "negative GET test #3 (bed target)",
-			target: "http://localhost:8080/newURL3",
+			target: "http://localhost" + HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "3",
 			want: want{
 				code:     400,
 				response: "URL for the specified id was not found\n",
@@ -146,6 +152,9 @@ func testingPostHandlerJSON(t *testing.T) {
 		response outSt
 	}
 
+	var HendlerSetting handlers.ServConfig
+	HendlerSetting = handlers.HendlerSetting()
+
 	tests := []struct {
 		name string
 		body inSt
@@ -156,7 +165,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://golang-blog.blogspot.com"},
 			want: want{
 				code:     201,
-				response: outSt{Result: "http://localhost:8080/newURL3"},
+				response: outSt{Result: "http://localhost" + HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "3"},
 			},
 		},
 		{
@@ -164,7 +173,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://jsoneditoronline.org"},
 			want: want{
 				code:     201,
-				response: outSt{Result: "http://localhost:8080/newURL4"},
+				response: outSt{Result: "http://localhost" + HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "4"},
 			},
 		},
 		{

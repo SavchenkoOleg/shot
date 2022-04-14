@@ -4,14 +4,40 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
 
 var mapURL = make(map[string]string)
 var mapID = make(map[string]string)
-var newURLPref = "newURL"
-var localURL = "http://localhost:8080/"
+
+type ServConfig struct {
+	NewURLPref   string
+	ServerAdress string
+}
+
+func HendlerSetting() (outConf ServConfig) {
+
+	var newURLPref string
+	var serverAdress string
+	var exp bool
+
+	outConf.NewURLPref = "newURL"
+	outConf.ServerAdress = ":8080"
+
+	newURLPref, exp = os.LookupEnv("BASE_URL")
+	if exp {
+		outConf.NewURLPref = newURLPref
+	}
+
+	serverAdress, exp = os.LookupEnv("SERVER_ADDRESS")
+	if exp {
+		outConf.ServerAdress = serverAdress
+	}
+
+	return outConf
+}
 
 func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 
@@ -23,6 +49,9 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var NewID string
+	var config ServConfig
+
+	config = HendlerSetting()
 
 	bodyIn := inSt{}
 	bodyOut := outSt{}
@@ -47,12 +76,12 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 
 	NewID, exp := mapURL[bodyIn.URL]
 	if !exp {
-		NewID = newURLPref + strconv.Itoa(len(mapURL)+1)
+		NewID = "/" + config.NewURLPref + strconv.Itoa(len(mapURL)+1)
 		mapURL[bodyURL] = NewID
 		mapID[NewID] = bodyURL
 	}
 
-	bodyOut.Result = localURL + NewID
+	bodyOut.Result = "http://localhost" + config.ServerAdress + NewID
 
 	tx, err := json.Marshal(bodyOut)
 
@@ -70,6 +99,9 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
 	var NewID string
+	var config ServConfig
+
+	config = HendlerSetting()
 
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
@@ -86,11 +118,11 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
 	NewID, exp := mapURL[bodyURL]
 	if !exp {
-		NewID = newURLPref + strconv.Itoa(len(mapURL)+1)
+		NewID = "/" + config.NewURLPref + strconv.Itoa(len(mapURL)+1)
 		mapURL[bodyURL] = NewID
 		mapID[NewID] = bodyURL
 	}
-	NewURL := localURL + NewID
+	NewURL := "http://localhost" + config.ServerAdress + NewID
 	w.WriteHeader(201)
 	w.Write([]byte(NewURL))
 }

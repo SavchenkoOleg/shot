@@ -5,12 +5,14 @@ import (
 	"net/http"
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
+
+	var HendlerSetting handlers.ServConfig
+	HendlerSetting = handlers.HendlerSetting()
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -22,7 +24,7 @@ func main() {
 	r.Post("/", handlers.HandlerShot)
 	r.Post("/api/shorten", handlers.HandlerShotJSON)
 
-	err := http.ListenAndServe(":8080", r)
+	err := http.ListenAndServe(HendlerSetting.ServerAdress, r)
 	if err != nil {
 		log.Fatal(err)
 
