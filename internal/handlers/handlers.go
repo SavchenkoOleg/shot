@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 )
 
 var mapURL = make(map[string]string)
@@ -132,8 +131,8 @@ func HandlerIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "The parameter is missing", http.StatusBadRequest)
 		return
 	}
-	id := strings.TrimPrefix(idPath, "/")
-	url, exp := mapID[id]
+
+	url, exp := mapID[idPath]
 
 	if !exp {
 		http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
