@@ -47,7 +47,7 @@ func HendlerSetting() (outConf ServConfig) {
 
 	outConf.NewURLPref = "newURL"
 	outConf.ServerAdress = ":8080"
-	outConf.BaseURL = "localhost"
+	outConf.BaseURL = "http://localhost"
 
 	BaseURL, exp := os.LookupEnv("BASE_URL")
 	if exp {
