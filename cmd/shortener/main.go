@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
 	"github.com/go-chi/chi/v5"
@@ -24,8 +23,7 @@ func main() {
 	r.Post("/", handlers.HandlerShot)
 	r.Post("/api/shorten", handlers.HandlerShotJSON)
 
-	addr := strings.Replace(HendlerSetting.ServerAdress, "http://", "", 1)
-	err := http.ListenAndServe(addr, r)
+	err := http.ListenAndServe(HendlerSetting.ServerAdress, r)
 	if err != nil {
 		log.Fatal(err)
 

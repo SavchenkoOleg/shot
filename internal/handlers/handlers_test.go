@@ -29,7 +29,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
-				response: HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "1",
+				response: HendlerSetting.FullPathTest + "1",
 			},
 		},
 		{
@@ -37,7 +37,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
-				response: HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "2",
+				response: HendlerSetting.FullPathTest + "2",
 			},
 		},
 		{
@@ -93,7 +93,7 @@ func testingGetHandler(t *testing.T) {
 	}{
 		{
 			name:   "negative GET test #2 (empty target)",
-			target: HendlerSetting.ServerAdress,
+			target: HendlerSetting.BaseURL + HendlerSetting.ServerAdress,
 			want: want{
 				code:     400,
 				response: "The parameter is missing\n",
@@ -101,7 +101,7 @@ func testingGetHandler(t *testing.T) {
 		},
 		{
 			name:   "negative GET test #3 (bed target)",
-			target: HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "3",
+			target: HendlerSetting.FullPathTest + "3",
 			want: want{
 				code:     400,
 				response: "URL for the specified id was not found\n",
@@ -162,7 +162,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://golang-blog.blogspot.com"},
 			want: want{
 				code:     201,
-				response: outSt{Result: HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "3"},
+				response: outSt{Result: HendlerSetting.FullPathTest + "3"},
 			},
 		},
 		{
@@ -170,7 +170,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://jsoneditoronline.org"},
 			want: want{
 				code:     201,
-				response: outSt{Result: HendlerSetting.ServerAdress + "/" + HendlerSetting.NewURLPref + "4"},
+				response: outSt{Result: HendlerSetting.FullPathTest + "4"},
 			},
 		},
 		{

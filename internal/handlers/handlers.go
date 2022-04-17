@@ -8,12 +8,35 @@ import (
 	"strconv"
 )
 
-var mapURL = make(map[string]string)
-var mapID = make(map[string]string)
+var mapLongURL = make(map[string]string)
+var mapShotURL = make(map[string]string)
 
 type ServConfig struct {
 	NewURLPref   string
 	ServerAdress string
+	BaseURL      string
+	FullPathTest string
+}
+
+func ReductionURL(longURL string) (shotURL string) {
+
+	config := HendlerSetting()
+
+	idURL, exp := mapLongURL[longURL]
+	if !exp {
+		idURL = "/" + config.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
+		mapLongURL[longURL] = idURL
+		mapShotURL[idURL] = longURL
+	}
+
+	return config.BaseURL + config.ServerAdress + idURL
+}
+
+func RestoreURL(shotURL string) (restURL string, exp bool) {
+
+	restURL, exp = mapShotURL[shotURL]
+
+	return restURL, exp
 }
 
 func HendlerSetting() (outConf ServConfig) {
@@ -23,7 +46,8 @@ func HendlerSetting() (outConf ServConfig) {
 	var exp bool
 
 	outConf.NewURLPref = "newURL"
-	outConf.ServerAdress = "http://localhost:8080"
+	outConf.ServerAdress = ":8080"
+	outConf.BaseURL = "http://localhost"
 
 	newURLPref, exp = os.LookupEnv("BASE_URL")
 	if exp {
@@ -35,6 +59,7 @@ func HendlerSetting() (outConf ServConfig) {
 		outConf.ServerAdress = serverAdress
 	}
 
+	outConf.FullPathTest = outConf.BaseURL + outConf.ServerAdress + "/" + outConf.NewURLPref
 	return outConf
 }
 
@@ -46,10 +71,6 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 	type outSt struct {
 		Result string `json:"result"`
 	}
-
-	var NewID string
-
-	config := HendlerSetting()
 
 	bodyIn := inSt{}
 	bodyOut := outSt{}
@@ -72,14 +93,7 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	NewID, exp := mapURL[bodyIn.URL]
-	if !exp {
-		NewID = "/" + config.NewURLPref + strconv.Itoa(len(mapURL)+1)
-		mapURL[bodyURL] = NewID
-		mapID[NewID] = bodyURL
-	}
-
-	bodyOut.Result = config.ServerAdress + NewID
+	bodyOut.Result = ReductionURL(bodyIn.URL)
 
 	tx, err := json.Marshal(bodyOut)
 
@@ -96,32 +110,23 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 
 func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
-	var NewID string
-
-	config := HendlerSetting()
-
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	bodyURL := string(b)
 
-	if len(bodyURL) == 0 {
+	longURL := string(b)
+
+	if len(longURL) == 0 {
 		http.Error(w, "uncorrect reduction URL", http.StatusBadRequest)
 		return
 	}
 
-	NewID, exp := mapURL[bodyURL]
-	if !exp {
-		NewID = "/" + config.NewURLPref + strconv.Itoa(len(mapURL)+1)
-		mapURL[bodyURL] = NewID
-		mapID[NewID] = bodyURL
-	}
-	NewURL := config.ServerAdress + NewID
+	shotURL := ReductionURL(longURL)
 	w.WriteHeader(201)
-	w.Write([]byte(NewURL))
+	w.Write([]byte(shotURL))
 }
 
 func HandlerIndex(w http.ResponseWriter, r *http.Request) {
@@ -132,14 +137,14 @@ func HandlerIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, exp := mapID[idPath]
+	longURL, exp := RestoreURL(idPath)
 
 	if !exp {
 		http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Location", url)
+	w.Header().Set("Location", longURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 
 }
