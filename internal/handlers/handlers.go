@@ -41,7 +41,6 @@ func RestoreURL(shotURL string) (restURL string, exp bool) {
 
 func HendlerSetting() (outConf ServConfig) {
 
-	var newURLPref string
 	var serverAdress string
 	var exp bool
 
@@ -49,9 +48,9 @@ func HendlerSetting() (outConf ServConfig) {
 	outConf.ServerAdress = ":8080"
 	outConf.BaseURL = "http://localhost"
 
-	newURLPref, exp = os.LookupEnv("BASE_URL")
+	BaseURL, exp := os.LookupEnv("BASE_URL")
 	if exp {
-		outConf.NewURLPref = newURLPref
+		outConf.BaseURL = BaseURL
 	}
 
 	serverAdress, exp = os.LookupEnv("SERVER_ADDRESS")
