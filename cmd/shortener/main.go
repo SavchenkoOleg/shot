@@ -5,13 +5,21 @@ import (
 	"net/http"
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
+	"github.com/SavchenkoOleg/shot/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
 
-	HendlerSetting := handlers.HendlerSetting()
+	HendlerSetting := storage.HendlerSetting()
+
+	if HendlerSetting.FileStorage {
+		err := storage.RestoreMatchs()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)

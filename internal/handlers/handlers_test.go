@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
+	"github.com/SavchenkoOleg/shot/internal/storage"
 )
 
 func testingPostHandler(t *testing.T) {
@@ -17,7 +18,7 @@ func testingPostHandler(t *testing.T) {
 		response string
 	}
 
-	HendlerSetting := handlers.HendlerSetting()
+	HendlerSetting := storage.HendlerSetting()
 
 	tests := []struct {
 		name string
@@ -84,7 +85,7 @@ func testingGetHandler(t *testing.T) {
 		response string
 	}
 
-	HendlerSetting := handlers.HendlerSetting()
+	HendlerSetting := storage.HendlerSetting()
 
 	tests := []struct {
 		name   string
@@ -150,7 +151,7 @@ func testingPostHandlerJSON(t *testing.T) {
 		response outSt
 	}
 
-	HendlerSetting := handlers.HendlerSetting()
+	HendlerSetting := storage.HendlerSetting()
 
 	tests := []struct {
 		name string

@@ -4,64 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
-	"strconv"
+
+	"github.com/SavchenkoOleg/shot/internal/storage"
 )
-
-var mapLongURL = make(map[string]string)
-var mapShotURL = make(map[string]string)
-
-type ServConfig struct {
-	NewURLPref   string
-	ServerAdress string
-	BaseURL      string
-	FullPathTest string
-}
-
-func ReductionURL(longURL string) (shotURL string) {
-
-	config := HendlerSetting()
-
-	idURL, exp := mapLongURL[longURL]
-	if !exp {
-		idURL = "/" + config.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
-		mapLongURL[longURL] = idURL
-		mapShotURL[idURL] = longURL
-	}
-
-	return config.BaseURL + config.ServerAdress + idURL
-
-}
-
-func RestoreURL(shotURL string) (restURL string, exp bool) {
-
-	restURL, exp = mapShotURL[shotURL]
-
-	return restURL, exp
-}
-
-func HendlerSetting() (outConf ServConfig) {
-
-	var serverAdress string
-	var exp bool
-
-	outConf.NewURLPref = "newURL"
-	outConf.ServerAdress = ":8080"
-	outConf.BaseURL = "http://localhost"
-
-	BaseURL, exp := os.LookupEnv("BASE_URL")
-	if exp {
-		outConf.BaseURL = BaseURL
-	}
-
-	serverAdress, exp = os.LookupEnv("SERVER_ADDRESS")
-	if exp {
-		outConf.ServerAdress = serverAdress
-	}
-
-	outConf.FullPathTest = outConf.BaseURL + outConf.ServerAdress + "/" + outConf.NewURLPref
-	return outConf
-}
 
 func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 
@@ -93,7 +38,14 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bodyOut.Result = ReductionURL(bodyIn.URL)
+	resultURL, err := storage.ReductionURL(bodyIn.URL)
+
+	if err != nil {
+		http.Error(w, "internal err", http.StatusInternalServerError)
+		return
+	}
+
+	bodyOut.Result = resultURL
 
 	tx, err := json.Marshal(bodyOut)
 
@@ -124,7 +76,13 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shotURL := ReductionURL(longURL)
+	shotURL, err := storage.ReductionURL(longURL)
+
+	if err != nil {
+		http.Error(w, "internal err", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(201)
 	w.Write([]byte(shotURL))
 }
@@ -137,7 +95,7 @@ func HandlerIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	longURL, exp := RestoreURL(idPath)
+	longURL, exp := storage.RestoreURL(idPath)
 
 	if !exp {
 		http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
