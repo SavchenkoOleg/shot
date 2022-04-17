@@ -99,14 +99,6 @@ func testingGetHandler(t *testing.T) {
 				response: "The parameter is missing\n",
 			},
 		},
-		{
-			name:   "negative GET test #3 (bed target)",
-			target: HendlerSetting.FullPathTest + "3",
-			want: want{
-				code:     400,
-				response: "URL for the specified id was not found\n",
-			},
-		},
 	}
 	for _, tt := range tests {
 
