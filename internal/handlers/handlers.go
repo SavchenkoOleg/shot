@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
 )
@@ -89,7 +90,8 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
 func HandlerIndex(w http.ResponseWriter, r *http.Request) {
 
-	idPath := r.URL.Path
+	idPath := strings.Replace(r.URL.Path, "/"+storage.ServConfig.BaseURL+"/", "", 1)
+
 	if idPath == "" {
 		http.Error(w, "The parameter is missing", http.StatusBadRequest)
 		return

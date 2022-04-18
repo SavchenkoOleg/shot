@@ -7,8 +7,13 @@ import (
 	"strconv"
 )
 
-type ServConfig struct {
-	SettingSet      bool
+type FlagConfigStruct struct {
+	ServerAdress    string
+	BaseURL         string
+	FileStoragePath string
+}
+
+type ServConfigtruct struct {
 	NewURLPref      string
 	ServerAdress    string
 	BaseURL         string
@@ -24,51 +29,61 @@ type MatchEvent struct {
 
 var mapLongURL = make(map[string]string)
 var mapShotURL = make(map[string]string)
+var ServConfig ServConfigtruct
+var FlagConfig FlagConfigStruct
 
-func HendlerSetting() (outConf ServConfig) {
+func HendlerSetting() (outConf ServConfigtruct) {
 
-	if !outConf.SettingSet {
+	// значения по умолчанию
+	outConf.NewURLPref = "newURL"
+	outConf.ServerAdress = ":8080"
+	outConf.BaseURL = "shot"
+	outConf.FileStorage = false
+	outConf.FileStoragePath = ""
 
-		var serverAdress string
-		var exp bool
+	// переменные окружения
+	BaseURL, exp := os.LookupEnv("BASE_URL")
+	if exp {
+		outConf.BaseURL = BaseURL
+	}
 
-		outConf.NewURLPref = "newURL"
-		outConf.ServerAdress = ":8080"
-		outConf.BaseURL = "http://localhost"
-		outConf.FileStorage = false
-		outConf.FileStoragePath = ""
+	serverAdress, exp := os.LookupEnv("SERVER_ADDRESS")
+	if exp {
+		outConf.ServerAdress = serverAdress
+	}
 
-		BaseURL, exp := os.LookupEnv("BASE_URL")
-		if exp {
-			outConf.BaseURL = BaseURL
-		}
+	outConf.FileStoragePath, outConf.FileStorage = os.LookupEnv("FILE_STORAGE_PATH")
 
-		serverAdress, exp = os.LookupEnv("SERVER_ADDRESS")
-		if exp {
-			outConf.ServerAdress = serverAdress
-		}
-
-		outConf.FileStoragePath, outConf.FileStorage = os.LookupEnv("FILE_STORAGE_PATH")
-
-		outConf.FullPathTest = outConf.BaseURL + outConf.ServerAdress + "/" + outConf.NewURLPref
-
-		outConf.SettingSet = true
+	// флаги, если они есть
+	if FlagConfig.BaseURL != "" {
+		outConf.BaseURL = FlagConfig.BaseURL
 
 	}
+
+	if FlagConfig.ServerAdress != "" {
+		outConf.ServerAdress = FlagConfig.ServerAdress
+
+	}
+
+	if FlagConfig.FileStoragePath != "" {
+		outConf.FileStoragePath = FlagConfig.FileStoragePath
+
+	}
+
+	//  синтез пути, испольхуемый в тестах
+	outConf.FullPathTest = "http://localhost" + outConf.ServerAdress + "/" + outConf.BaseURL + "/" + outConf.NewURLPref
 
 	return outConf
 }
 
 func ReductionURL(longURL string) (shotURL string, err error) {
 
-	config := HendlerSetting()
-
 	idURL, exp := mapLongURL[longURL]
 	if !exp {
 
-		idURL = "/" + config.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
+		idURL = ServConfig.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
 
-		if config.FileStorage {
+		if ServConfig.FileStorage {
 			err := addMatch(longURL, idURL)
 			if err != nil {
 				return "", err
@@ -79,7 +94,7 @@ func ReductionURL(longURL string) (shotURL string, err error) {
 		mapShotURL[idURL] = longURL
 	}
 
-	shotURL = config.BaseURL + config.ServerAdress + idURL
+	shotURL = "http://localhost" + ServConfig.ServerAdress + "/" + ServConfig.BaseURL + "/" + idURL
 
 	return shotURL, nil
 }
@@ -96,11 +111,9 @@ func RestoreURL(shotURL string) (restURL string, exp bool) {
 
 func addMatch(longURL, shotURL string) (err error) {
 
-	config := HendlerSetting()
-
 	matc := MatchEvent{longURL, shotURL}
 
-	file, err := os.OpenFile(config.FileStoragePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(ServConfig.FileStoragePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		return err
 	}
@@ -120,11 +133,9 @@ func addMatch(longURL, shotURL string) (err error) {
 
 func RestoreMatchs() (err error) {
 
-	config := HendlerSetting()
-
 	var match MatchEvent
 
-	file, err := os.OpenFile(config.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0777)
+	file, err := os.OpenFile(ServConfig.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}

@@ -18,8 +18,6 @@ func testingPostHandler(t *testing.T) {
 		response string
 	}
 
-	HendlerSetting := storage.HendlerSetting()
-
 	tests := []struct {
 		name string
 		body string
@@ -30,7 +28,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
-				response: HendlerSetting.FullPathTest + "1",
+				response: storage.ServConfig.FullPathTest + "1",
 			},
 		},
 		{
@@ -38,7 +36,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
-				response: HendlerSetting.FullPathTest + "2",
+				response: storage.ServConfig.FullPathTest + "2",
 			},
 		},
 		{
@@ -85,8 +83,6 @@ func testingGetHandler(t *testing.T) {
 		response string
 	}
 
-	HendlerSetting := storage.HendlerSetting()
-
 	tests := []struct {
 		name   string
 		target string
@@ -94,7 +90,7 @@ func testingGetHandler(t *testing.T) {
 	}{
 		{
 			name:   "negative GET test #2 (empty target)",
-			target: HendlerSetting.BaseURL + HendlerSetting.ServerAdress,
+			target: storage.ServConfig.BaseURL + storage.ServConfig.ServerAdress,
 			want: want{
 				code:     400,
 				response: "The parameter is missing\n",
@@ -102,7 +98,7 @@ func testingGetHandler(t *testing.T) {
 		},
 		{
 			name:   "negative GET test #3 (bed target)",
-			target: HendlerSetting.FullPathTest + "3",
+			target: storage.ServConfig.FullPathTest + "3",
 			want: want{
 				code:     400,
 				response: "URL for the specified id was not found\n",
@@ -151,8 +147,6 @@ func testingPostHandlerJSON(t *testing.T) {
 		response outSt
 	}
 
-	HendlerSetting := storage.HendlerSetting()
-
 	tests := []struct {
 		name string
 		body inSt
@@ -163,7 +157,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://golang-blog.blogspot.com"},
 			want: want{
 				code:     201,
-				response: outSt{Result: HendlerSetting.FullPathTest + "3"},
+				response: outSt{Result: storage.ServConfig.FullPathTest + "3"},
 			},
 		},
 		{
@@ -171,7 +165,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://jsoneditoronline.org"},
 			want: want{
 				code:     201,
-				response: outSt{Result: HendlerSetting.FullPathTest + "4"},
+				response: outSt{Result: storage.ServConfig.FullPathTest + "4"},
 			},
 		},
 		{
@@ -217,6 +211,8 @@ func testingPostHandlerJSON(t *testing.T) {
 }
 
 func TestHandlerShot(t *testing.T) {
+
+	storage.ServConfig = storage.HendlerSetting()
 
 	testingPostHandler(t)
 
