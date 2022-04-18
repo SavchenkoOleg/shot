@@ -67,7 +67,7 @@ func HendlerSetting() (outConf ServConfigtruct) {
 
 	if FlagConfig.FileStoragePath != "" {
 		outConf.FileStoragePath = FlagConfig.FileStoragePath
-
+		outConf.FileStorage = true
 	}
 
 	//  синтез пути, испольхуемый в тестах
