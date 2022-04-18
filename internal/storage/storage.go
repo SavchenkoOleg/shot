@@ -94,7 +94,7 @@ func ReductionURL(longURL string) (shotURL string, err error) {
 		mapShotURL[idURL] = longURL
 	}
 
-	shotURL = "http://localhost" + ServConfig.ServerAdress + "/" + ServConfig.BaseURL + "/" + idURL
+	shotURL = ServConfig.BaseURL + "/" + idURL
 
 	return shotURL, nil
 }
