@@ -36,7 +36,7 @@ func HendlerSetting() (outConf ServConfigtruct) {
 
 	// значения по умолчанию
 	outConf.NewURLPref = "newURL"
-	outConf.ServerAdress = ":8080"
+	outConf.ServerAdress = "localhost:8080"
 	outConf.BaseURL = "shot"
 	outConf.FileStorage = false
 	outConf.FileStoragePath = ""
@@ -71,7 +71,7 @@ func HendlerSetting() (outConf ServConfigtruct) {
 	}
 
 	//  синтез пути, испольхуемый в тестах
-	outConf.FullPathTest = "http://localhost" + outConf.ServerAdress + "/" + outConf.BaseURL + "/" + outConf.NewURLPref
+	outConf.FullPathTest = "http://" + outConf.ServerAdress + "/" + outConf.BaseURL + "/" + outConf.NewURLPref
 
 	return outConf
 }
@@ -94,7 +94,7 @@ func ReductionURL(longURL string) (shotURL string, err error) {
 		mapShotURL[idURL] = longURL
 	}
 
-	shotURL = ServConfig.BaseURL + "/" + idURL
+	shotURL = "http://" + ServConfig.ServerAdress + "/" + ServConfig.BaseURL + "/" + idURL
 
 	return shotURL, nil
 }
