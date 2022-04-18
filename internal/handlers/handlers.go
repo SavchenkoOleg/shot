@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -8,6 +9,37 @@ import (
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
 )
+
+type compressBodyWr struct {
+	http.ResponseWriter
+	writer io.Writer
+}
+
+func (gz compressBodyWr) Write(b []byte) (int, error) {
+	return gz.writer.Write(b)
+}
+
+func CompressGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		defer gz.Close()
+		w.Header().Set("Content-Encoding", "gzip")
+		next.ServeHTTP(compressBodyWr{
+			ResponseWriter: w,
+			writer:         gz,
+		}, r)
+	})
+}
 
 func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 
