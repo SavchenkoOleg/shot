@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SavchenkoOleg/shot/internal/conf"
 	"github.com/SavchenkoOleg/shot/internal/handlers"
-	"github.com/SavchenkoOleg/shot/internal/storage"
 )
 
 func testingPostHandler(t *testing.T) {
@@ -28,7 +28,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
-				response: storage.ServConfig.FullPathTest + "1",
+				response: conf.ServConfig.FullPathTest + "1",
 			},
 		},
 		{
@@ -36,7 +36,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
-				response: storage.ServConfig.FullPathTest + "2",
+				response: conf.ServConfig.FullPathTest + "2",
 			},
 		},
 		{
@@ -90,7 +90,7 @@ func testingGetHandler(t *testing.T) {
 	}{
 		{
 			name:   "negative GET test #2 (empty target)",
-			target: storage.ServConfig.BaseURL + storage.ServConfig.ServerAdress,
+			target: conf.ServConfig.BaseURL + conf.ServConfig.ServerAdress,
 			want: want{
 				code:     400,
 				response: "The parameter is missing\n",
@@ -98,7 +98,7 @@ func testingGetHandler(t *testing.T) {
 		},
 		{
 			name:   "negative GET test #3 (bed target)",
-			target: storage.ServConfig.FullPathTest + "3",
+			target: conf.ServConfig.FullPathTest + "3",
 			want: want{
 				code:     400,
 				response: "URL for the specified id was not found\n",
@@ -157,7 +157,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://golang-blog.blogspot.com"},
 			want: want{
 				code:     201,
-				response: outSt{Result: storage.ServConfig.FullPathTest + "3"},
+				response: outSt{Result: conf.ServConfig.FullPathTest + "3"},
 			},
 		},
 		{
@@ -165,7 +165,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://jsoneditoronline.org"},
 			want: want{
 				code:     201,
-				response: outSt{Result: storage.ServConfig.FullPathTest + "4"},
+				response: outSt{Result: conf.ServConfig.FullPathTest + "4"},
 			},
 		},
 		{
@@ -212,7 +212,7 @@ func testingPostHandlerJSON(t *testing.T) {
 
 func TestHandlerShot(t *testing.T) {
 
-	storage.ServConfig = storage.HendlerSetting()
+	conf.ServConfig = conf.HendlerSetting()
 
 	testingPostHandler(t)
 

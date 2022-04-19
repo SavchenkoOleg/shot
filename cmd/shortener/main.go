@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/SavchenkoOleg/shot/internal/conf"
 	"github.com/SavchenkoOleg/shot/internal/handlers"
 	"github.com/SavchenkoOleg/shot/internal/storage"
 	"github.com/go-chi/chi/v5"
@@ -13,17 +14,17 @@ import (
 
 func init() {
 
-	flag.StringVar(&storage.FlagConfig.ServerAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
-	flag.StringVar(&storage.FlagConfig.BaseURL, "b", "", "analog of environment variable BASE_URL")
-	flag.StringVar(&storage.FlagConfig.FileStoragePath, "f", "", "analog of environment variable FILE_STORAGE_PATH")
+	flag.StringVar(&conf.FlagConfig.ServerAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
+	flag.StringVar(&conf.FlagConfig.BaseURL, "b", "", "analog of environment variable BASE_URL")
+	flag.StringVar(&conf.FlagConfig.FileStoragePath, "f", "", "analog of environment variable FILE_STORAGE_PATH")
 }
 
 func main() {
 
 	flag.Parse()
-	storage.ServConfig = storage.HendlerSetting()
+	conf.ServConfig = conf.HendlerSetting()
 
-	if storage.ServConfig.FileStorage {
+	if conf.ServConfig.FileStorage {
 		err := storage.RestoreMatchs()
 		if err != nil {
 			log.Fatal(err)
@@ -37,11 +38,11 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(handlers.CompressGzip)
 
-	r.Get("/"+storage.ServConfig.BaseURL+"/{id}", handlers.HandlerIndex)
+	r.Get("/"+conf.ServConfig.BaseURL+"/{id}", handlers.HandlerIndex)
 	r.Post("/", handlers.HandlerShot)
 	r.Post("/api/shorten", handlers.HandlerShotJSON)
 
-	err := http.ListenAndServe(storage.ServConfig.ServerAdress, r)
+	err := http.ListenAndServe(conf.ServConfig.ServerAdress, r)
 	if err != nil {
 		log.Fatal(err)
 

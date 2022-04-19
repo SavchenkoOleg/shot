@@ -3,12 +3,11 @@ package handlers
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
+	"github.com/SavchenkoOleg/shot/internal/conf"
 	"github.com/SavchenkoOleg/shot/internal/storage"
 )
 
@@ -24,7 +23,16 @@ func (gz compressBodyWr) Write(b []byte) (int, error) {
 func CompressGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Fprintln(os.Stdout, "Accept-Encoding  installed "+r.Header.Get("Accept-Encoding"))
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = gz
+			defer gz.Close()
+
+		}
 
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
@@ -40,7 +48,7 @@ func CompressGzip(next http.Handler) http.Handler {
 
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
-		//w.Header().Del("Content-Length")
+		w.Header().Del("Content-Length")
 		next.ServeHTTP(compressBodyWr{
 			ResponseWriter: w,
 			writer:         gz,
@@ -129,7 +137,7 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 
 func HandlerIndex(w http.ResponseWriter, r *http.Request) {
 
-	idPath := strings.Replace(r.URL.Path, "/"+storage.ServConfig.BaseURL+"/", "", 1)
+	idPath := strings.Replace(r.URL.Path, "/"+conf.ServConfig.BaseURL+"/", "", 1)
 
 	if idPath == "" {
 		http.Error(w, "The parameter is missing", http.StatusBadRequest)
