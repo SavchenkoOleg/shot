@@ -3,8 +3,10 @@ package handlers
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
@@ -22,6 +24,8 @@ func (gz compressBodyWr) Write(b []byte) (int, error) {
 func CompressGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		fmt.Fprintln(os.Stdout, "Accept-Encoding  installed "+r.Header.Get("Accept-Encoding"))
+
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return
@@ -33,10 +37,10 @@ func CompressGzip(next http.Handler) http.Handler {
 			return
 		}
 		defer gz.Close()
-		w.Header().Set("Content-Encoding", "gzip")
+
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
-		w.Header().Del("Content-Length")
+		//w.Header().Del("Content-Length")
 		next.ServeHTTP(compressBodyWr{
 			ResponseWriter: w,
 			writer:         gz,
