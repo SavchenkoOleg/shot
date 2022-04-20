@@ -12,7 +12,6 @@ import (
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
 	"github.com/SavchenkoOleg/shot/internal/storage"
-	"github.com/zenazn/goji/web"
 )
 
 func testingPostHandler(conf storage.AppContext, t *testing.T) {
@@ -59,8 +58,7 @@ func testingPostHandler(conf storage.AppContext, t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", bodyReader)
 
 			w := httptest.NewRecorder()
-			h := web.HandlerFunc(handlers.HandlerShot)
-			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerIndex})
+			h := http.HandlerFunc(handlers.HandlerShot(&conf))
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -117,8 +115,7 @@ func testingGetHandler(conf storage.AppContext, t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, tt.target, nil)
 
 			w := httptest.NewRecorder()
-			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerIndex})
-			h := web.HandlerFunc(handlers.HandlerIndex)
+			h := http.HandlerFunc(handlers.HandlerIndex(&conf))
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -193,8 +190,7 @@ func testingPostHandlerJSON(conf storage.AppContext, t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bodyReader)
 
 			w := httptest.NewRecorder()
-			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerShotJSON})
-			h := web.HandlerFunc(handlers.HandlerShotJSON)
+			h := http.HandlerFunc(handlers.HandlerShotJSON(&conf))
 			h.ServeHTTP(w, request)
 			res := w.Result()
 

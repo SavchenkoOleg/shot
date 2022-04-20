@@ -55,102 +55,106 @@ func CompressGzip(next http.Handler) http.Handler {
 	})
 }
 
-func HandlerShotJSON(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
+func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	type inSt struct {
-		URL string `json:"url"`
+		type inSt struct {
+			URL string `json:"url"`
+		}
+		type outSt struct {
+			Result string `json:"result"`
+		}
+
+		bodyIn := inSt{}
+		bodyOut := outSt{}
+
+		b, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if err := json.Unmarshal(b, &bodyIn); err != nil {
+			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
+			return
+		}
+
+		bodyURL := bodyIn.URL
+		if bodyURL == "" {
+			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
+			return
+		}
+
+		resultURL, err := storage.ReductionURL(bodyIn.URL, conf)
+
+		if err != nil {
+			http.Error(w, "internal err", http.StatusInternalServerError)
+			return
+		}
+
+		bodyOut.Result = resultURL
+
+		tx, err := json.Marshal(bodyOut)
+
+		if err != nil {
+			http.Error(w, "internal err", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+
+		w.WriteHeader(201)
+		w.Write(tx)
 	}
-	type outSt struct {
-		Result string `json:"result"`
-	}
-
-	bodyIn := inSt{}
-	bodyOut := outSt{}
-
-	b, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	if err := json.Unmarshal(b, &bodyIn); err != nil {
-		http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
-		return
-	}
-
-	bodyURL := bodyIn.URL
-	if bodyURL == "" {
-		http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
-		return
-	}
-
-	resultURL, err := storage.ReductionURL(bodyIn.URL, conf)
-
-	if err != nil {
-		http.Error(w, "internal err", http.StatusInternalServerError)
-		return
-	}
-
-	bodyOut.Result = resultURL
-
-	tx, err := json.Marshal(bodyOut)
-
-	if err != nil {
-		http.Error(w, "internal err", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-
-	w.WriteHeader(201)
-	w.Write(tx)
 }
 
-func HandlerShot(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
+func HandlerShot(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 
-	b, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		longURL := string(b)
+
+		if len(longURL) == 0 {
+			http.Error(w, "uncorrect reduction URL", http.StatusBadRequest)
+			return
+		}
+
+		shotURL, err := storage.ReductionURL(longURL, conf)
+
+		if err != nil {
+			http.Error(w, "internal err", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(201)
+		w.Write([]byte(shotURL))
 	}
-
-	longURL := string(b)
-
-	if len(longURL) == 0 {
-		http.Error(w, "uncorrect reduction URL", http.StatusBadRequest)
-		return
-	}
-
-	shotURL, err := storage.ReductionURL(longURL, conf)
-
-	if err != nil {
-		http.Error(w, "internal err", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(201)
-	w.Write([]byte(shotURL))
 }
 
-func HandlerIndex(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
+func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	idPath := strings.Replace(r.URL.Path, "/"+conf.BaseURL+"/", "", 1)
+		idPath := strings.Replace(r.URL.Path, "/"+conf.BaseURL+"/", "", 1)
 
-	if idPath == "" {
-		http.Error(w, "The parameter is missing", http.StatusBadRequest)
-		return
+		if idPath == "" {
+			http.Error(w, "The parameter is missing", http.StatusBadRequest)
+			return
+		}
+
+		longURL, exp := storage.RestoreURL(idPath)
+
+		if !exp {
+			http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Location", longURL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
-
-	longURL, exp := storage.RestoreURL(idPath)
-
-	if !exp {
-		http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Location", longURL)
-	w.WriteHeader(http.StatusTemporaryRedirect)
-
 }

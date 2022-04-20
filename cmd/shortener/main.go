@@ -93,9 +93,9 @@ func main() {
 	r := web.New()
 	r.Use(handlers.CompressGzip)
 
-	r.Get("/"+conf.BaseURL+"/*", appHandler{&conf, handlers.HandlerIndex})
-	r.Post("/", appHandler{&conf, handlers.HandlerShot})
-	r.Post("/api/shorten", appHandler{&conf, handlers.HandlerShotJSON})
+	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
+	r.Post("/", handlers.HandlerShot(&conf))
+	r.Post("/api/shorten", handlers.HandlerShotJSON(&conf))
 
 	err := http.ListenAndServe(conf.ServerAdress, r)
 	if err != nil {
