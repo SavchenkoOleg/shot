@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/SavchenkoOleg/shot/internal/conf"
 	"github.com/SavchenkoOleg/shot/internal/storage"
 )
 
@@ -56,7 +55,7 @@ func CompressGzip(next http.Handler) http.Handler {
 	})
 }
 
-func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
+func HandlerShotJSON(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
 
 	type inSt struct {
 		URL string `json:"url"`
@@ -86,7 +85,7 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resultURL, err := storage.ReductionURL(bodyIn.URL)
+	resultURL, err := storage.ReductionURL(bodyIn.URL, conf)
 
 	if err != nil {
 		http.Error(w, "internal err", http.StatusInternalServerError)
@@ -108,7 +107,7 @@ func HandlerShotJSON(w http.ResponseWriter, r *http.Request) {
 	w.Write(tx)
 }
 
-func HandlerShot(w http.ResponseWriter, r *http.Request) {
+func HandlerShot(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
 
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
@@ -124,7 +123,7 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shotURL, err := storage.ReductionURL(longURL)
+	shotURL, err := storage.ReductionURL(longURL, conf)
 
 	if err != nil {
 		http.Error(w, "internal err", http.StatusInternalServerError)
@@ -135,9 +134,9 @@ func HandlerShot(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shotURL))
 }
 
-func HandlerIndex(w http.ResponseWriter, r *http.Request) {
+func HandlerIndex(conf *storage.AppContext, w http.ResponseWriter, r *http.Request) {
 
-	idPath := strings.Replace(r.URL.Path, "/"+conf.ServConfig.BaseURL+"/", "", 1)
+	idPath := strings.Replace(r.URL.Path, "/"+conf.BaseURL+"/", "", 1)
 
 	if idPath == "" {
 		http.Error(w, "The parameter is missing", http.StatusBadRequest)

@@ -5,9 +5,16 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
-
-	"github.com/SavchenkoOleg/shot/internal/conf"
 )
+
+type AppContext struct {
+	NewURLPref      string
+	ServerAdress    string
+	BaseURL         string
+	FullPathTest    string
+	FileStorage     bool
+	FileStoragePath string
+}
 
 type MatchEvent struct {
 	LongURL string `json:"longURL"`
@@ -17,15 +24,15 @@ type MatchEvent struct {
 var mapLongURL = make(map[string]string)
 var mapShotURL = make(map[string]string)
 
-func ReductionURL(longURL string) (shotURL string, err error) {
+func ReductionURL(longURL string, conf *AppContext) (shotURL string, err error) {
 
 	idURL, exp := mapLongURL[longURL]
 	if !exp {
 
-		idURL = conf.ServConfig.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
+		idURL = conf.NewURLPref + strconv.Itoa(len(mapLongURL)+1)
 
-		if conf.ServConfig.FileStorage {
-			err := addMatch(longURL, idURL)
+		if conf.FileStorage {
+			err := addMatch(longURL, idURL, conf)
 			if err != nil {
 				return "", err
 			}
@@ -35,7 +42,7 @@ func ReductionURL(longURL string) (shotURL string, err error) {
 		mapShotURL[idURL] = longURL
 	}
 
-	shotURL = "http://" + conf.ServConfig.ServerAdress + "/" + conf.ServConfig.BaseURL + "/" + idURL
+	shotURL = "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
 
 	return shotURL, nil
 }
@@ -50,11 +57,11 @@ func RestoreURL(shotURL string) (restURL string, exp bool) {
 	return resultURL, resultExp
 }
 
-func addMatch(longURL, shotURL string) (err error) {
+func addMatch(longURL, shotURL string, conf *AppContext) (err error) {
 
 	matc := MatchEvent{longURL, shotURL}
 
-	file, err := os.OpenFile(conf.ServConfig.FileStoragePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(conf.FileStoragePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		return err
 	}
@@ -72,11 +79,11 @@ func addMatch(longURL, shotURL string) (err error) {
 
 }
 
-func RestoreMatchs() (err error) {
+func RestoreMatchs(conf AppContext) (err error) {
 
 	var match MatchEvent
 
-	file, err := os.OpenFile(conf.ServConfig.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0777)
+	file, err := os.OpenFile(conf.FileStoragePath, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return err
 	}
