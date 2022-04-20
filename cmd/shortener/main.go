@@ -8,7 +8,8 @@ import (
 
 	"github.com/SavchenkoOleg/shot/internal/handlers"
 	"github.com/SavchenkoOleg/shot/internal/storage"
-	"github.com/zenazn/goji/web"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type flagConfigStruct struct {
@@ -90,8 +91,11 @@ func main() {
 		}
 	}
 
-	r := web.New()
-	r.Use(handlers.CompressGzip)
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
 	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
 	r.Post("/", handlers.HandlerShot(&conf))
