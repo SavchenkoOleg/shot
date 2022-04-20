@@ -2,17 +2,20 @@ package handlers_test
 
 import (
 	"encoding/json"
+	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
-	"github.com/SavchenkoOleg/shot/internal/conf"
 	"github.com/SavchenkoOleg/shot/internal/handlers"
+	"github.com/SavchenkoOleg/shot/internal/storage"
+	"github.com/zenazn/goji/web"
 )
 
-func testingPostHandler(t *testing.T) {
+func testingPostHandler(conf storage.AppContext, t *testing.T) {
 	type want struct {
 		code     int
 		response string
@@ -28,7 +31,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://yandex.ru",
 			want: want{
 				code:     201,
-				response: conf.ServConfig.FullPathTest + "1",
+				response: conf.FullPathTest + "1",
 			},
 		},
 		{
@@ -36,7 +39,7 @@ func testingPostHandler(t *testing.T) {
 			body: "http://mail.ru",
 			want: want{
 				code:     201,
-				response: conf.ServConfig.FullPathTest + "2",
+				response: conf.FullPathTest + "2",
 			},
 		},
 		{
@@ -48,6 +51,7 @@ func testingPostHandler(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -55,7 +59,8 @@ func testingPostHandler(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", bodyReader)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handlers.HandlerShot)
+			h := web.HandlerFunc(handlers.HandlerShot)
+			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerIndex})
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -77,7 +82,7 @@ func testingPostHandler(t *testing.T) {
 	}
 }
 
-func testingGetHandler(t *testing.T) {
+func testingGetHandler(conf storage.AppContext, t *testing.T) {
 	type want struct {
 		code     int
 		response string
@@ -90,7 +95,7 @@ func testingGetHandler(t *testing.T) {
 	}{
 		{
 			name:   "negative GET test #2 (empty target)",
-			target: conf.ServConfig.BaseURL + conf.ServConfig.ServerAdress,
+			target: conf.BaseURL + conf.ServerAdress,
 			want: want{
 				code:     400,
 				response: "The parameter is missing\n",
@@ -98,20 +103,22 @@ func testingGetHandler(t *testing.T) {
 		},
 		{
 			name:   "negative GET test #3 (bed target)",
-			target: conf.ServConfig.FullPathTest + "3",
+			target: conf.FullPathTest + "3",
 			want: want{
 				code:     400,
 				response: "URL for the specified id was not found\n",
 			},
 		},
 	}
+
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, tt.target, nil)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handlers.HandlerIndex)
+			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerIndex})
+			h := web.HandlerFunc(handlers.HandlerIndex)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -133,7 +140,7 @@ func testingGetHandler(t *testing.T) {
 	}
 }
 
-func testingPostHandlerJSON(t *testing.T) {
+func testingPostHandlerJSON(conf storage.AppContext, t *testing.T) {
 
 	type inSt struct {
 		URL string `json:"url"`
@@ -157,7 +164,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://golang-blog.blogspot.com"},
 			want: want{
 				code:     201,
-				response: outSt{Result: conf.ServConfig.FullPathTest + "3"},
+				response: outSt{Result: conf.FullPathTest + "3"},
 			},
 		},
 		{
@@ -165,7 +172,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			body: inSt{URL: "https://jsoneditoronline.org"},
 			want: want{
 				code:     201,
-				response: outSt{Result: conf.ServConfig.FullPathTest + "4"},
+				response: outSt{Result: conf.FullPathTest + "4"},
 			},
 		},
 		{
@@ -177,6 +184,7 @@ func testingPostHandlerJSON(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -185,7 +193,8 @@ func testingPostHandlerJSON(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bodyReader)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(handlers.HandlerShotJSON)
+			//h := http.HandlerFunc(appHandler{&conf, handlers.HandlerShotJSON})
+			h := web.HandlerFunc(handlers.HandlerShotJSON)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
@@ -210,14 +219,72 @@ func testingPostHandlerJSON(t *testing.T) {
 	}
 }
 
+type flagConfigStruct struct {
+	serverAdress    string
+	baseURL         string
+	fileStoragePath string
+}
+
+var flagConfig flagConfigStruct
+
+func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
+
+	// значения по умолчанию
+	outConf.NewURLPref = "newURL"
+	outConf.ServerAdress = "localhost:8080"
+	outConf.BaseURL = "shot"
+	outConf.FileStorage = false
+	outConf.FileStoragePath = ""
+
+	// переменные окружения
+	BaseURL, exp := os.LookupEnv("BASE_URL")
+	if exp {
+		outConf.BaseURL = BaseURL
+	}
+
+	serverAdress, exp := os.LookupEnv("SERVER_ADDRESS")
+	if exp {
+		outConf.ServerAdress = serverAdress
+	}
+
+	outConf.FileStoragePath, outConf.FileStorage = os.LookupEnv("FILE_STORAGE_PATH")
+
+	// флаги, если они есть
+	if flags.baseURL != "" {
+		outConf.BaseURL = flags.baseURL
+
+	}
+
+	if flags.serverAdress != "" {
+		outConf.ServerAdress = flags.serverAdress
+
+	}
+
+	if flags.fileStoragePath != "" {
+		outConf.FileStoragePath = flags.fileStoragePath
+		outConf.FileStorage = true
+	}
+
+	//  синтез пути, используемый в тестах
+	outConf.FullPathTest = "http://" + outConf.ServerAdress + "/" + outConf.BaseURL + "/" + outConf.NewURLPref
+
+	return outConf
+}
+
 func TestHandlerShot(t *testing.T) {
 
-	conf.ServConfig = conf.HendlerSetting()
+	// init conf
+	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
+	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")
+	flag.StringVar(&flagConfig.fileStoragePath, "f", "", "analog of environment variable FILE_STORAGE_PATH")
+	flag.Parse()
 
-	testingPostHandler(t)
+	conf := hendlerSetting(flagConfig)
 
-	testingGetHandler(t)
+	testingPostHandler(conf, t)
 
-	testingPostHandlerJSON(t)
+	testingGetHandler(conf, t)
+
+	testingPostHandlerJSON(conf, t)
 
 }
