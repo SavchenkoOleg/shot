@@ -20,16 +20,6 @@ type flagConfigStruct struct {
 
 var flagConfig flagConfigStruct
 
-type appHandler struct {
-	appContext *storage.AppContext
-	h          func(*storage.AppContext, http.ResponseWriter, *http.Request)
-}
-
-func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	ah.h(ah.appContext, w, r)
-}
-
 func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 
 	// значения по умолчанию
@@ -96,6 +86,7 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(handlers.CompressGzip)
 
 	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
 	r.Post("/", handlers.HandlerShot(&conf))
