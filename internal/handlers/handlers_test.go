@@ -269,6 +269,8 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 
 func TestHandlerShot(t *testing.T) {
 
+	var flagConfig flagConfigStruct
+
 	// init conf
 	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
 	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")

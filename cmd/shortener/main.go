@@ -18,8 +18,6 @@ type flagConfigStruct struct {
 	fileStoragePath string
 }
 
-var flagConfig flagConfigStruct
-
 func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 
 	// значения по умолчанию
@@ -28,6 +26,7 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 	outConf.BaseURL = "shot"
 	outConf.FileStorage = false
 	outConf.FileStoragePath = ""
+	outConf.UserID = ""
 
 	// переменные окружения
 	BaseURL, exp := os.LookupEnv("BASE_URL")
@@ -66,6 +65,8 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 
 func main() {
 
+	var flagConfig flagConfigStruct
+
 	// init conf
 	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
 	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")
@@ -87,7 +88,9 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(handlers.CompressGzip)
+	r.Use(handlers.CookieMiddleware(&conf))
 
+	r.Get("/api/user/urls", handlers.HandlerUsershortingList(&conf))
 	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
 	r.Post("/", handlers.HandlerShot(&conf))
 	r.Post("/api/shorten", handlers.HandlerShotJSON(&conf))

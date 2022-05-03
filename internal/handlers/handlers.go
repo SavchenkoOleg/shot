@@ -1,9 +1,16 @@
 package handlers
 
 import (
+	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -19,40 +26,55 @@ func (gz compressBodyWr) Write(b []byte) (int, error) {
 	return gz.writer.Write(b)
 }
 
-func CompressGzip(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func genereteUuidString(b []byte) string {
 
-		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-			gz, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+
+}
+
+func CookieMiddleware(conf *storage.AppContext) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			const CookieUserIDName = "UserIDName"
+			var cypher = []byte("xDFaLoYSqcRaHZxs")
+			var sk = "verySecretKey"
+
+			cookieUserID, _ := r.Cookie(CookieUserIDName)
+
+			if cookieUserID != nil {
+
+				userIDdata, _ := hex.DecodeString(cookieUserID.Value)
+
+				h := hmac.New(sha256.New, cypher)
+				h.Write([]byte(sk))
+				sign := h.Sum(nil)
+
+				if bytes.Contains(userIDdata, sign) {
+					b := bytes.Replace(userIDdata, sign, []byte(nil), -1)
+					conf.UserID = genereteUuidString(b)
+
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
-			r.Body = gz
-			defer gz.Close()
 
-		}
+			userID, _ := generateUuid()
+			conf.UserID = genereteUuidString(userID)
 
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			h := hmac.New(sha256.New, cypher)
+			h.Write([]byte(sk))
+			CookieUserIDValue := hex.EncodeToString(append(userID, h.Sum(nil)...))
+			cookie := http.Cookie{
+				Name:   CookieUserIDName,
+				Value:  CookieUserIDValue,
+				MaxAge: 3600}
+
+			http.SetCookie(w, &cookie)
 			next.ServeHTTP(w, r)
-			return
-		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-		if err != nil {
-			http.Error(w, "", http.StatusInternalServerError)
-			return
-		}
-		defer gz.Close()
-
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Vary", "Accept-Encoding")
-		w.Header().Del("Content-Length")
-		next.ServeHTTP(compressBodyWr{
-			ResponseWriter: w,
-			writer:         gz,
-		}, r)
-	})
+		})
+	}
 }
 
 func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
@@ -157,4 +179,70 @@ func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
 		w.Header().Set("Location", longURL)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
+}
+
+func HandlerUsershortingList(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		jsonText, err := storage.AllUserActon(conf)
+
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if jsonText == "" {
+			http.Error(w, "No Content", http.StatusNoContent)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(jsonText))
+	}
+}
+
+func generateUuid() ([]byte, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return b, nil
+}
+
+func CompressGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = gz
+			defer gz.Close()
+
+		}
+
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+		w.Header().Del("Content-Length")
+		next.ServeHTTP(compressBodyWr{
+			ResponseWriter: w,
+			writer:         gz,
+		}, r)
+	})
 }

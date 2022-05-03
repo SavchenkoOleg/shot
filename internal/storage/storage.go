@@ -14,6 +14,7 @@ type AppContext struct {
 	FullPathTest    string
 	FileStorage     bool
 	FileStoragePath string
+	UserID          string
 }
 
 type MatchEvent struct {
@@ -21,10 +22,48 @@ type MatchEvent struct {
 	ShotURL string `json:"shotURL"`
 }
 
+type UsersEvent struct {
+	LongURL string `json:"original_url"`
+	ShotURL string `json:"short_url"`
+}
+
+type userAction struct {
+	userID  string
+	longURL string
+	shotURL string
+}
+
 var mapLongURL = make(map[string]string)
 var mapShotURL = make(map[string]string)
+var arrActions []userAction
+
+func AllUserActon(conf *AppContext) (jsonText string, err error) {
+
+	var userArr []UsersEvent
+
+	for i := 0; i < len(arrActions); i++ {
+		if arrActions[i].userID == conf.UserID {
+			rec := UsersEvent{arrActions[i].longURL, arrActions[i].shotURL}
+			userArr = append(userArr, rec)
+		}
+	}
+
+	if len(userArr) == 0 {
+		return "", nil
+	}
+
+	data, err := json.MarshalIndent(userArr, "", "")
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+
+}
 
 func ReductionURL(longURL string, conf *AppContext) (shotURL string, err error) {
+
+	var act userAction
 
 	idURL, exp := mapLongURL[longURL]
 	if !exp {
@@ -43,6 +82,12 @@ func ReductionURL(longURL string, conf *AppContext) (shotURL string, err error) 
 	}
 
 	shotURL = "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
+
+	act.userID = conf.UserID
+	act.longURL = longURL
+	act.shotURL = shotURL
+
+	arrActions = append(arrActions, act)
 
 	return shotURL, nil
 }
