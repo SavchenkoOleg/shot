@@ -26,7 +26,7 @@ func (gz compressBodyWr) Write(b []byte) (int, error) {
 	return gz.writer.Write(b)
 }
 
-func genereteUuidString(b []byte) string {
+func genereteUUIDString(b []byte) string {
 
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 
@@ -52,15 +52,15 @@ func CookieMiddleware(conf *storage.AppContext) func(next http.Handler) http.Han
 
 				if bytes.Contains(userIDdata, sign) {
 					b := bytes.Replace(userIDdata, sign, []byte(nil), -1)
-					conf.UserID = genereteUuidString(b)
+					conf.UserID = genereteUUIDString(b)
 
 					next.ServeHTTP(w, r)
 					return
 				}
 			}
 
-			userID, _ := generateUuid()
-			conf.UserID = genereteUuidString(userID)
+			userID, _ := generateUUID()
+			conf.UserID = genereteUUIDString(userID)
 
 			h := hmac.New(sha256.New, cypher)
 			h.Write([]byte(sk))
@@ -196,12 +196,13 @@ func HandlerUsershortingList(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(jsonText))
 	}
 }
 
-func generateUuid() ([]byte, error) {
+func generateUUID() ([]byte, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
