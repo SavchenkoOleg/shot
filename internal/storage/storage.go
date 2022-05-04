@@ -5,16 +5,20 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+
+	"github.com/jackc/pgx/v4"
 )
 
 type AppContext struct {
-	NewURLPref      string
-	ServerAdress    string
-	BaseURL         string
-	FullPathTest    string
-	FileStorage     bool
-	FileStoragePath string
-	UserID          string
+	NewURLPref         string
+	ServerAdress       string
+	BaseURL            string
+	FullPathTest       string
+	FileStorage        bool
+	FileStoragePath    string
+	UserID             string
+	ConnectionStringDB string
+	PgxConnect         pgx.Conn
 }
 
 type MatchEvent struct {

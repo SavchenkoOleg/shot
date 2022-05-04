@@ -13,9 +13,10 @@ import (
 )
 
 type flagConfigStruct struct {
-	serverAdress    string
-	baseURL         string
-	fileStoragePath string
+	serverAdress       string
+	baseURL            string
+	fileStoragePath    string
+	connectionStringDB string
 }
 
 func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
@@ -27,6 +28,7 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 	outConf.FileStorage = false
 	outConf.FileStoragePath = ""
 	outConf.UserID = ""
+	outConf.ConnectionStringDB = ""
 
 	// переменные окружения
 	BaseURL, exp := os.LookupEnv("BASE_URL")
@@ -40,6 +42,11 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 	}
 
 	outConf.FileStoragePath, outConf.FileStorage = os.LookupEnv("FILE_STORAGE_PATH")
+
+	сonnectionStringDB, exp := os.LookupEnv("DATABASE_DSN")
+	if exp {
+		outConf.ConnectionStringDB = сonnectionStringDB
+	}
 
 	// флаги, если они есть
 	if flags.baseURL != "" {
@@ -57,6 +64,10 @@ func hendlerSetting(flags flagConfigStruct) (outConf storage.AppContext) {
 		outConf.FileStorage = true
 	}
 
+	if flags.connectionStringDB != "" {
+		outConf.ConnectionStringDB = flags.connectionStringDB
+	}
+
 	//  синтез пути, используемый в тестах
 	outConf.FullPathTest = "http://" + outConf.ServerAdress + "/" + outConf.BaseURL + "/" + outConf.NewURLPref
 
@@ -71,6 +82,7 @@ func main() {
 	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
 	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")
 	flag.StringVar(&flagConfig.fileStoragePath, "f", "", "analog of environment variable FILE_STORAGE_PATH")
+	flag.StringVar(&flagConfig.connectionStringDB, "d", "", "analog of environment variable FILE_STORAGE_PATH")
 	flag.Parse()
 
 	conf := hendlerSetting(flagConfig)
@@ -92,8 +104,9 @@ func main() {
 
 	r.Get("/api/user/urls", handlers.HandlerUsershortingList(&conf))
 	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
-	r.Post("/", handlers.HandlerShot(&conf))
+	r.Get("/ping", handlers.HandlerPingDB(&conf))
 	r.Post("/api/shorten", handlers.HandlerShotJSON(&conf))
+	r.Post("/", handlers.HandlerShot(&conf))
 
 	err := http.ListenAndServe(conf.ServerAdress, r)
 	if err != nil {
