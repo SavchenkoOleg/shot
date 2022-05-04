@@ -273,7 +273,6 @@ func HandlerPingDB(conf *storage.AppContext) http.HandlerFunc {
 		defer cancel()
 
 		err = conf.PgxConnect.Ping(ctx)
-
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("Connect string: " + conf.PgxConnect.Config().ConnString()))
