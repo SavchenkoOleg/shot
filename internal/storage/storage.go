@@ -364,6 +364,11 @@ func DBshortenrBatch(inData []ShortenBatchIn, conf *AppContext) (outData []Short
 		outData = append(outData, rec)
 	}
 
+	err = tx.Commit(ctx)
+	if err != nil {
+		return []ShortenBatchOut{}, err
+	}
+
 	return outData, nil
 
 }
