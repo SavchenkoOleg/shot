@@ -33,6 +33,16 @@ type UsersEvent struct {
 	ShotURL string `json:"short_url"`
 }
 
+type ShortenBatchIn struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type ShortenBatchOut struct {
+	CorrelationID string `json:"correlation_id"`
+	ShotURL       string `json:"short_url"`
+}
+
 type userAction struct {
 	userID  string
 	longURL string
@@ -311,7 +321,7 @@ func InitDBShotner(conf *AppContext) (success bool, err error) {
 	conf.PgxConnect = *db
 	ctx := context.Background()
 
-	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT, ShotURL TEXT)")
+	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT, ShotURL TEXT, СorrelationID TEXT)")
 	if err != nil {
 		return false, err
 	}
@@ -323,4 +333,37 @@ func InitDBShotner(conf *AppContext) (success bool, err error) {
 	}
 
 	return true, nil
+}
+
+func DBshortenrBatch(inData []ShortenBatchIn, conf *AppContext) (outData []ShortenBatchOut, err error) {
+
+	ctx := context.Background()
+
+	tx, err := conf.PgxConnect.Begin(ctx)
+	if err != nil {
+		return outData, err
+	}
+	defer tx.Rollback(ctx)
+
+	for _, v := range inData {
+
+		UserID := conf.UserID
+		ShotURL := "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + v.CorrelationID
+		LongURL := v.OriginalURL
+
+		_, err = tx.Exec(ctx, "INSERT INTO URLs(LongURL, ShotURL, СorrelationID) VALUES ($1, $2 , $3)", LongURL, ShotURL, v.CorrelationID)
+		if err != nil {
+			return outData, err
+		}
+		_, err = tx.Exec(ctx, "INSERT INTO UserAction (UserID, LongURL, ShotURL) VALUES ($1, $2 , $3)", UserID, LongURL, ShotURL)
+		if err != nil {
+			return outData, err
+		}
+
+		rec := ShortenBatchOut{v.CorrelationID, ShotURL}
+		outData = append(outData, rec)
+	}
+
+	return outData, nil
+
 }

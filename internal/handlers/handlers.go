@@ -264,3 +264,46 @@ func HandlerPingDB(conf *storage.AppContext) http.HandlerFunc {
 
 	}
 }
+
+func HandlerShotBach(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if conf.ConnectionStringDB == "" {
+			http.Error(w, "sql connection is not established", http.StatusInternalServerError)
+			return
+		}
+
+		bodyIn := []storage.ShortenBatchIn{}
+
+		b, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if err := json.Unmarshal(b, &bodyIn); err != nil {
+			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
+			return
+		}
+
+		bodyOut, err := storage.DBshortenrBatch(bodyIn, conf)
+
+		if err != nil {
+			http.Error(w, "internal err", http.StatusInternalServerError)
+			return
+		}
+
+		tx, err := json.Marshal(bodyOut)
+
+		if err != nil {
+			http.Error(w, "internal err", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+
+		w.WriteHeader(200)
+		w.Write(tx)
+	}
+}

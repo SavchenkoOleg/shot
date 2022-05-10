@@ -119,6 +119,7 @@ func main() {
 	r.Get("/api/user/urls", handlers.HandlerUsershortingList(&conf))
 	r.Get("/"+conf.BaseURL+"/*", handlers.HandlerIndex(&conf))
 	r.Get("/ping", handlers.HandlerPingDB(&conf))
+	r.Post("/api/shorten/batch", handlers.HandlerShotBach(&conf))
 	r.Post("/api/shorten", handlers.HandlerShotJSON(&conf))
 	r.Post("/", handlers.HandlerShot(&conf))
 
