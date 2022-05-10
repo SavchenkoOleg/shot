@@ -303,7 +303,7 @@ func HandlerShotBach(conf *storage.AppContext) http.HandlerFunc {
 
 		w.Header().Add("Content-Type", "application/json")
 
-		w.WriteHeader(200)
+		w.WriteHeader(201)
 		w.Write(tx)
 	}
 }
