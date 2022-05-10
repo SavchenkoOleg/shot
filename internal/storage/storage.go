@@ -53,7 +53,9 @@ func PingDB(conf *AppContext) (exp bool) {
 
 	defer db.Close(context.Background())
 
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
 	err = db.Ping(ctx)
 	return (err == nil)
 }
@@ -95,10 +97,10 @@ func dbAllUserActon(conf *AppContext) (jsonText string, err error) {
 	ctx := context.Background()
 
 	rows, err := conf.PgxConnect.Query(ctx, "SELECT ShotURL, LongURL FROM UserAction WHERE UserID = $1", conf.UserID)
-	defer rows.Close()
 	if err != nil {
 		return "", err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 
@@ -167,10 +169,11 @@ func dbReductionURL(longURL string, conf *AppContext) (shotURL string, err error
 	ctx := context.Background()
 
 	rows, err := conf.PgxConnect.Query(ctx, "SELECT ShotURL FROM URLs WHERE LongURL = $1", longURL)
-	defer rows.Close()
+
 	if err != nil {
 		return "", err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 
@@ -183,10 +186,11 @@ func dbReductionURL(longURL string, conf *AppContext) (shotURL string, err error
 	// нет записи соответсвия "longURL"
 	// добавляем в БД
 	rows, err = conf.PgxConnect.Query(ctx, "SELECT COUNT(*) as count FROM URLs")
-	defer rows.Close()
+
 	if err != nil {
 		return "", err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err = rows.Scan(&id)
@@ -234,10 +238,11 @@ func dbRestoreURL(idURL string, conf *AppContext) (restURL string, exp bool) {
 
 	shotURL := "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
 	rows, err := conf.PgxConnect.Query(ctx, "SELECT LongURL FROM URLs WHERE ShotURL = $1", shotURL)
-	defer rows.Close()
+
 	if err != nil {
 		return "", false
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 
