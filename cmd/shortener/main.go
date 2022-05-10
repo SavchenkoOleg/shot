@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
@@ -78,6 +79,8 @@ func main() {
 
 	var flagConfig flagConfigStruct
 
+	ctx := context.Background()
+
 	// init conf
 	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
 	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")
@@ -91,6 +94,17 @@ func main() {
 		err := storage.RestoreMatchs(conf)
 		if err != nil {
 			log.Fatal(err)
+		}
+	}
+
+	if conf.ConnectionStringDB != "" {
+		success, err := storage.InitDBShotner(&conf)
+		if err != nil {
+			log.Fatal(err)
+
+		}
+		if success {
+			defer conf.PgxConnect.Close(ctx)
 		}
 	}
 

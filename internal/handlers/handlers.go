@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
+
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -14,10 +14,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
-	"github.com/jackc/pgx/v4"
 )
 
 type compressBodyWr struct {
@@ -172,7 +170,7 @@ func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		longURL, exp := storage.RestoreURL(idPath)
+		longURL, exp := storage.RestoreURL(idPath, conf)
 
 		if !exp {
 			http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
@@ -254,26 +252,8 @@ func CompressGzip(next http.Handler) http.Handler {
 func HandlerPingDB(conf *storage.AppContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		if conf.ConnectionStringDB == "" {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("No connect string set"))
-			return
-		}
-
-		db, err := pgx.Connect(context.Background(), conf.ConnectionStringDB)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("No connection to the Postgres server"))
-			return
-		}
-		conf.PgxConnect = *db
-		defer db.Close(context.Background())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-
-		err = conf.PgxConnect.Ping(ctx)
-		if err == nil {
+		dbexp := storage.PingDB(conf)
+		if dbexp {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("Connect string: " + conf.PgxConnect.Config().ConnString()))
 			return
