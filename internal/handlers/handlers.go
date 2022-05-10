@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
+	"github.com/jackc/pgerrcode"
 )
 
 type compressBodyWr struct {
@@ -88,6 +89,10 @@ func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
 			Result string `json:"result"`
 		}
 
+		var resultStatusSucsess int
+
+		resultStatusSucsess = 201
+
 		bodyIn := inSt{}
 		bodyOut := outSt{}
 
@@ -111,7 +116,11 @@ func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
 
 		resultURL, err := storage.ReductionURL(bodyIn.URL, conf)
 
-		if err != nil {
+		if err != nil && storage.ErrorCode(err) == pgerrcode.UniqueViolation {
+
+			resultStatusSucsess = 409
+
+		} else if err != nil {
 			http.Error(w, "internal err", http.StatusInternalServerError)
 			return
 		}
@@ -127,13 +136,17 @@ func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
 
 		w.Header().Add("Content-Type", "application/json")
 
-		w.WriteHeader(201)
+		w.WriteHeader(resultStatusSucsess)
 		w.Write(tx)
 	}
 }
 
 func HandlerShot(conf *storage.AppContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		var resultStatusSucsess int
+		resultStatusSucsess = 201
+
 		b, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
@@ -150,12 +163,16 @@ func HandlerShot(conf *storage.AppContext) http.HandlerFunc {
 
 		shotURL, err := storage.ReductionURL(longURL, conf)
 
-		if err != nil {
+		if err != nil && storage.ErrorCode(err) == pgerrcode.UniqueViolation {
+
+			resultStatusSucsess = 409
+
+		} else if err != nil {
 			http.Error(w, "internal err", http.StatusInternalServerError)
 			return
 		}
 
-		w.WriteHeader(201)
+		w.WriteHeader(resultStatusSucsess)
 		w.Write([]byte(shotURL))
 	}
 }

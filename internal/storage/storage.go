@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -178,24 +180,8 @@ func dbReductionURL(longURL string, conf *AppContext) (shotURL string, err error
 	var URL string
 	ctx := context.Background()
 
-	rows, err := conf.PgxConnect.Query(ctx, "SELECT ShotURL FROM URLs WHERE LongURL = $1", longURL)
-
-	if err != nil {
-		return "", err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		if err := rows.Scan(&URL); err == nil {
-			return URL, err
-		}
-
-	}
-
-	// нет записи соответсвия "longURL"
 	// добавляем в БД
-	rows, err = conf.PgxConnect.Query(ctx, "SELECT COUNT(*) as count FROM URLs")
+	rows, err := conf.PgxConnect.Query(ctx, "SELECT COUNT(*) as count FROM URLs")
 
 	if err != nil {
 		return "", err
@@ -212,10 +198,32 @@ func dbReductionURL(longURL string, conf *AppContext) (shotURL string, err error
 	idURL := conf.NewURLPref + strconv.Itoa(id+1)
 	shotURL = "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
 
-	conf.PgxConnect.Exec(ctx,
+	_, err = conf.PgxConnect.Exec(ctx,
 		"INSERT INTO URLs (LongURL, ShotURL) VALUES ($1, $2)",
 		longURL,
 		shotURL)
+
+	if err != nil {
+
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation /* or just == "23505" */ {
+
+			rows, errqery := conf.PgxConnect.Query(ctx, "SELECT ShotURL FROM URLs WHERE LongURL = $1", longURL)
+
+			if errqery != nil {
+				return "", err
+			}
+			defer rows.Close()
+
+			for rows.Next() {
+				if errqery = rows.Scan(&URL); errqery == nil {
+					return URL, err
+				}
+
+			}
+		}
+		return URL, err
+	}
+
 	conf.PgxConnect.Exec(ctx,
 		"INSERT INTO UserAction (UserID, LongURL, ShotURL) VALUES ($1, $2 , $3)",
 		conf.UserID,
@@ -321,7 +329,7 @@ func InitDBShotner(conf *AppContext) (success bool, err error) {
 	conf.PgxConnect = *db
 	ctx := context.Background()
 
-	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT, ShotURL TEXT, СorrelationID TEXT)")
+	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT UNIQUE, ShotURL TEXT, СorrelationID TEXT)")
 	if err != nil {
 		return false, err
 	}
@@ -370,5 +378,14 @@ func DBshortenrBatch(inData []ShortenBatchIn, conf *AppContext) (outData []Short
 	}
 
 	return outData, nil
+
+}
+
+func ErrorCode(err error) string {
+	pgerr, ok := err.(*pgconn.PgError)
+	if !ok {
+		return ""
+	}
+	return pgerr.Code
 
 }
