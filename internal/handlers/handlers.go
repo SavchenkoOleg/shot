@@ -114,7 +114,7 @@ func HandlerShotJSON(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		resultURL, err := storage.ReductionURL(bodyIn.URL, conf)
+		resultURL, err := storage.ReductionURL(r.Context(), bodyIn.URL, conf)
 
 		if err != nil && storage.ErrorCode(err) == pgerrcode.UniqueViolation {
 
@@ -161,7 +161,7 @@ func HandlerShot(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		shotURL, err := storage.ReductionURL(longURL, conf)
+		shotURL, err := storage.ReductionURL(r.Context(), longURL, conf)
 
 		if err != nil && storage.ErrorCode(err) == pgerrcode.UniqueViolation {
 
@@ -187,7 +187,7 @@ func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		longURL, exp := storage.RestoreURL(idPath, conf)
+		longURL, exp := storage.RestoreURL(r.Context(), conf, idPath)
 
 		if !exp {
 			http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
@@ -202,7 +202,9 @@ func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
 func HandlerUsershortingList(conf *storage.AppContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		jsonText, err := storage.AllUserActon(conf)
+		rCtx := r.Context()
+
+		jsonText, err := storage.AllUserActon(rCtx, conf)
 
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -269,7 +271,9 @@ func CompressGzip(next http.Handler) http.Handler {
 func HandlerPingDB(conf *storage.AppContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		dbexp := storage.PingDB(conf)
+		rCtx := r.Context()
+
+		dbexp := storage.PingDB(rCtx, conf)
 		if dbexp {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("Connect string: " + conf.PgxConnect.Config().ConnString()))
@@ -304,7 +308,7 @@ func HandlerShotBach(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		bodyOut, err := storage.DBshortenrBatch(bodyIn, conf)
+		bodyOut, err := storage.DBshortenrBatch(r.Context(), conf, bodyIn)
 
 		if err != nil {
 			http.Error(w, "internal err", http.StatusInternalServerError)

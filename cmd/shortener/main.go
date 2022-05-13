@@ -79,8 +79,6 @@ func main() {
 
 	var flagConfig flagConfigStruct
 
-	ctx := context.Background()
-
 	// init conf
 	flag.StringVar(&flagConfig.serverAdress, "a", "", "analog of environment variable SERVER_ADDRESS")
 	flag.StringVar(&flagConfig.baseURL, "b", "", "analog of environment variable BASE_URL")
@@ -89,6 +87,7 @@ func main() {
 	flag.Parse()
 
 	conf := hendlerSetting(flagConfig)
+	conf.Ctx = context.Background()
 
 	if conf.FileStorage {
 		err := storage.RestoreMatchs(conf)
@@ -98,13 +97,13 @@ func main() {
 	}
 
 	if conf.ConnectionStringDB != "" {
-		success, err := storage.InitDBShotner(&conf)
+		success, err := storage.InitDBShotner(conf.Ctx, &conf)
 		if err != nil {
 			log.Fatal(err)
 
 		}
 		if success {
-			defer conf.PgxConnect.Close(ctx)
+			defer conf.PgxConnect.Close(conf.Ctx)
 		}
 	}
 
