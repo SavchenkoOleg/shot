@@ -23,7 +23,6 @@ type AppContext struct {
 	UserID             string
 	ConnectionStringDB string
 	PgxConnect         pgx.Conn
-	Ctx                context.Context
 }
 
 type MatchEvent struct {

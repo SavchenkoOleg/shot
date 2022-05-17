@@ -87,7 +87,7 @@ func main() {
 	flag.Parse()
 
 	conf := hendlerSetting(flagConfig)
-	conf.Ctx = context.Background()
+	ctx := context.Background()
 
 	if conf.FileStorage {
 		err := storage.RestoreMatchs(conf)
@@ -97,13 +97,13 @@ func main() {
 	}
 
 	if conf.ConnectionStringDB != "" {
-		success, err := storage.InitDBShotner(conf.Ctx, &conf)
+		success, err := storage.InitDBShotner(ctx, &conf)
 		if err != nil {
 			log.Fatal(err)
 
 		}
 		if success {
-			defer conf.PgxConnect.Close(conf.Ctx)
+			defer conf.PgxConnect.Close(ctx)
 		}
 	}
 
