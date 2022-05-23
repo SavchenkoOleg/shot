@@ -187,10 +187,15 @@ func HandlerIndex(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
-		longURL, exp := storage.RestoreURL(r.Context(), conf, idPath)
+		longURL, exp, gone := storage.RestoreURL(r.Context(), conf, idPath)
 
 		if !exp {
 			http.Error(w, "URL for the specified id was not found", http.StatusBadRequest)
+			return
+		}
+
+		if gone {
+			http.Error(w, "URL for the specified id has been deleted", http.StatusGone)
 			return
 		}
 
@@ -326,5 +331,43 @@ func HandlerShotBach(conf *storage.AppContext) http.HandlerFunc {
 
 		w.WriteHeader(201)
 		w.Write(tx)
+	}
+}
+
+func HandlerDeleteBach(conf *storage.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if conf.ConnectionStringDB == "" {
+			http.Error(w, "sql connection is not established", http.StatusInternalServerError)
+			return
+		}
+
+		var bodyIn []string
+
+		b, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.Unmarshal(b, &bodyIn); err != nil {
+			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
+			return
+		}
+
+		if len(bodyIn) == 0 {
+			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
+			return
+		}
+
+		delRec := storage.DelRec{UserID: conf.UserID, DelURL: bodyIn}
+
+		go func() {
+			conf.DelChanel <- delRec
+		}()
+
+		w.WriteHeader(202)
+
 	}
 }

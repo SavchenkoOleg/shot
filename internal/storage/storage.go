@@ -23,6 +23,12 @@ type AppContext struct {
 	UserID             string
 	ConnectionStringDB string
 	PgxConnect         pgx.Conn
+	DelChanel          chan DelRec
+}
+
+type DelRec struct {
+	UserID string
+	DelURL []string
 }
 
 type MatchEvent struct {
@@ -189,9 +195,10 @@ func dbReductionURL(ctx context.Context, conf *AppContext, longURL string) (shot
 	shotURL = "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
 
 	_, err = conf.PgxConnect.Exec(ctx,
-		"INSERT INTO URLs (LongURL, ShotURL) VALUES ($1, $2)",
+		"INSERT INTO URLs (LongURL, ShotURL, Delmark) VALUES ($1, $2, $3)",
 		longURL,
-		shotURL)
+		shotURL,
+		false)
 
 	if err != nil {
 
@@ -215,16 +222,17 @@ func dbReductionURL(ctx context.Context, conf *AppContext, longURL string) (shot
 	}
 
 	conf.PgxConnect.Exec(ctx,
-		"INSERT INTO UserAction (UserID, LongURL, ShotURL) VALUES ($1, $2 , $3)",
+		"INSERT INTO UserAction (UserID, LongURL, ShotURL, idURL) VALUES ($1, $2 , $3, $4)",
 		conf.UserID,
 		longURL,
-		shotURL)
+		shotURL,
+		idURL)
 
 	return shotURL, nil
 
 }
 
-func RestoreURL(ctx context.Context, conf *AppContext, shotURL string) (restURL string, exp bool) {
+func RestoreURL(ctx context.Context, conf *AppContext, shotURL string) (restURL string, exp bool, gone bool) {
 
 	if conf.ConnectionStringDB != "" {
 
@@ -236,30 +244,31 @@ func RestoreURL(ctx context.Context, conf *AppContext, shotURL string) (restURL 
 
 	resultURL, resultExp = mapShotURL[shotURL]
 
-	return resultURL, resultExp
+	return resultURL, resultExp, false
 }
 
-func dbRestoreURL(ctx context.Context, conf *AppContext, idURL string) (restURL string, exp bool) {
+func dbRestoreURL(ctx context.Context, conf *AppContext, idURL string) (restURL string, exp bool, gone bool) {
 
 	var resultURL string
+	var delURL bool
 
 	shotURL := "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + idURL
-	rows, err := conf.PgxConnect.Query(ctx, "SELECT LongURL FROM URLs WHERE ShotURL = $1", shotURL)
+	rows, err := conf.PgxConnect.Query(ctx, "SELECT LongURL, Delmark FROM URLs WHERE ShotURL = $1", shotURL)
 
 	if err != nil {
-		return "", false
+		return "", false, false
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 
-		if err := rows.Scan(&resultURL); err == nil {
-			return resultURL, true
+		if err := rows.Scan(&resultURL, &delURL); err == nil {
+			return resultURL, true, delURL
 		}
 
 	}
 
-	return "", false
+	return "", false, false
 }
 
 func addMatch(longURL, shotURL string, conf *AppContext) (err error) {
@@ -317,12 +326,12 @@ func InitDBShotner(ctx context.Context, conf *AppContext) (success bool, err err
 
 	conf.PgxConnect = *db
 
-	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT UNIQUE, ShotURL TEXT, СorrelationID TEXT)")
+	_, err = db.Exec(ctx, "Create table if not exists URLs( LongURL TEXT UNIQUE, ShotURL TEXT, СorrelationID TEXT, DelMark boolean NOT NULL)")
 	if err != nil {
 		return false, err
 	}
 
-	_, err = db.Exec(ctx, "Create table if not exists UserAction( UserID TEXT, LongURL TEXT, ShotURL TEXT)")
+	_, err = db.Exec(ctx, "Create table if not exists UserAction( UserID TEXT, LongURL TEXT, ShotURL TEXT, idURL TEXT)")
 	if err != nil {
 
 		return false, err
@@ -345,11 +354,11 @@ func DBshortenrBatch(ctx context.Context, conf *AppContext, inData []ShortenBatc
 		ShotURL := "http://" + conf.ServerAdress + "/" + conf.BaseURL + "/" + v.CorrelationID
 		LongURL := v.OriginalURL
 
-		_, err = tx.Exec(ctx, "INSERT INTO URLs(LongURL, ShotURL, СorrelationID) VALUES ($1, $2 , $3)", LongURL, ShotURL, v.CorrelationID)
+		_, err = tx.Exec(ctx, "INSERT INTO URLs(LongURL, ShotURL, СorrelationID, Delmark) VALUES ($1, $2 , $3, $4)", LongURL, ShotURL, v.CorrelationID, false)
 		if err != nil {
 			return outData, err
 		}
-		_, err = tx.Exec(ctx, "INSERT INTO UserAction (UserID, LongURL, ShotURL) VALUES ($1, $2 , $3)", UserID, LongURL, ShotURL)
+		_, err = tx.Exec(ctx, "INSERT INTO UserAction (UserID, LongURL, ShotURL, idURL) VALUES ($1, $2, $3, $4)", UserID, LongURL, ShotURL, v.CorrelationID)
 		if err != nil {
 			return outData, err
 		}
@@ -374,4 +383,42 @@ func ErrorCode(err error) string {
 	}
 	return pgerr.Code
 
+}
+
+func bachDelete(ctx context.Context, conf *AppContext, inStruct DelRec) (err error) {
+
+	tx, err := conf.PgxConnect.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	updateText :=
+		`UPDATE public.urls AS url
+	SET delmark = TRUE
+	FROM
+  	(SELECT useraction.longurl
+   		FROM public.useraction AS useraction
+   	JOIN
+     (SELECT $1,
+    	         del_idURL
+    FROM unnest($2::text[]) AS del_idURL) AS del_t ON useraction.idurl = del_t.del_idURL) AS deltab
+	WHERE url.longurl = deltab.longurl
+  	AND NOT url.delmark`
+
+	_, err = tx.Exec(ctx, updateText, inStruct.UserID, inStruct.DelURL)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit(ctx)
+
+	return err
+
+}
+
+func DelWorker(ctx context.Context, conf *AppContext) {
+	for rec := range conf.DelChanel {
+		bachDelete(ctx, conf, rec)
+	}
 }

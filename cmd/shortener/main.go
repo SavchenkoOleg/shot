@@ -107,6 +107,12 @@ func main() {
 		}
 	}
 
+	delChanel := make(chan storage.DelRec)
+	conf.DelChanel = delChanel
+	defer func() { close(delChanel) }()
+
+	go storage.DelWorker(ctx, &conf)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -121,6 +127,7 @@ func main() {
 	r.Post("/api/shorten/batch", handlers.HandlerShotBach(&conf))
 	r.Post("/api/shorten", handlers.HandlerShotJSON(&conf))
 	r.Post("/", handlers.HandlerShot(&conf))
+	r.Delete("/api/user/urls", handlers.HandlerDeleteBach(&conf))
 
 	err := http.ListenAndServe(conf.ServerAdress, r)
 	if err != nil {
