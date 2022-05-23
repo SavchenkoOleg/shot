@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/SavchenkoOleg/shot/internal/storage"
@@ -172,6 +173,7 @@ func HandlerShot(conf *storage.AppContext) http.HandlerFunc {
 			return
 		}
 
+		fmt.Fprintln(os.Stdout, "->"+shotURL)
 		w.WriteHeader(resultStatusSucsess)
 		w.Write([]byte(shotURL))
 	}
@@ -360,6 +362,8 @@ func HandlerDeleteBach(conf *storage.AppContext) http.HandlerFunc {
 			http.Error(w, "uncorrect body URL format", http.StatusBadRequest)
 			return
 		}
+
+		fmt.Fprintln(os.Stdout, bodyIn)
 
 		delRec := storage.DelRec{UserID: conf.UserID, DelURL: bodyIn}
 
