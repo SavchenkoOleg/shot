@@ -226,7 +226,7 @@ func dbReductionURL(ctx context.Context, conf *AppContext, longURL string) (shot
 		conf.UserID,
 		longURL,
 		shotURL,
-		idURL)
+		conf.BaseURL+"/"+idURL)
 
 	return shotURL, nil
 
@@ -358,7 +358,7 @@ func DBshortenrBatch(ctx context.Context, conf *AppContext, inData []ShortenBatc
 		if err != nil {
 			return outData, err
 		}
-		_, err = tx.Exec(ctx, "INSERT INTO UserAction (UserID, LongURL, ShotURL, idURL) VALUES ($1, $2, $3, $4)", UserID, LongURL, ShotURL, v.CorrelationID)
+		_, err = tx.Exec(ctx, "INSERT INTO UserAction (UserID, LongURL, ShotURL, idURL) VALUES ($1, $2, $3, $4)", UserID, LongURL, ShotURL, conf.BaseURL+"/"+v.CorrelationID)
 		if err != nil {
 			return outData, err
 		}
